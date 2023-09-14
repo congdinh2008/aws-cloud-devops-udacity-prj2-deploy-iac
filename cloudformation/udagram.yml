@@ -1,0 +1,18 @@
+Description: CD12352 - Infrastructure as Code Project - Udagram
+
+Parameters:
+  # Add your parameters here
+
+Resources:
+  # Add your resources here
+  # We include a portion of the LaunchTemplate resource so you can use the UserData.
+  WebAppLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties: 
+      LaunchTemplateData:
+        UserData:
+          Fn::Base64: |
+            #!/bin/bash
+            apt-get update -y
+            sudo apt-get install nginx -y
+            service nginx start
