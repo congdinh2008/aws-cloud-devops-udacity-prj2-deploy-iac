@@ -3,7 +3,7 @@ REGION="us-east-1"
 
 # Define a list of items
 # my_list=("s3" "iam" "network" "bastion" "udagram")
-my_list=("bastion")
+my_list=("udagram")
 
 # Loop through the list
 for item in "${my_list[@]}"; do
