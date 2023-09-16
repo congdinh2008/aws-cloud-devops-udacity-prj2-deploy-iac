@@ -1,0 +1,248 @@
+Description: CD12352 - Infrastructure as Code Project - Udagram
+
+Parameters:
+  # Add your parameters here
+  EnvironmentName:
+    Type: String
+    Description: An environment name that will be prefixed to resource names
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    ConstraintDescription: must be dev or prod
+
+  InstanceType:
+    Type: String
+    Description: Enter t2.micro for the instance type.
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t2.medium
+    ConstraintDescription: must be a valid EC2 instance type.
+
+  InstanceAMI:
+    Type: String
+    Description: Enter the AMI ID for the instance.
+    Default: ami-0d5eff06f840b45e9
+    ConstraintDescription: must be a valid AMI ID.
+
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+
+Resources:
+  # Add your resources here
+  UdagramLoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Udagram Load Balancer Security Group
+      VpcId:
+        Fn::ImportValue: !Sub ${EnvironmentName}-Udagram-VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: "0.0.0.0/0"
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: "0.0.0.0/0"
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-LB-SecurityGroup"
+
+  UdagramWebAppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Udagram Web App Security Group
+      VpcId:
+        Fn::ImportValue: !Sub ${EnvironmentName}-Udagram-VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: "0.0.0.0/0"
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-WebApp-SecurityGroup"
+
+  UdagramWebAppAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        - Fn::ImportValue: !Sub ${EnvironmentName}-Udagram-PrivateSubnet1
+        - Fn::ImportValue: !Sub ${EnvironmentName}-Udagram-PrivateSubnet2
+      LaunchConfigurationName: !Ref UdagramWebAppLaunchConfiguration
+      MinSize: 2
+      MaxSize: 3
+      DesiredCapacity: 2
+      TargetGroupARNs:
+        - !Ref UdagramLoadBalancerTargetGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-WebAppAutoScalingGroup"
+          PropagateAtLaunch: true
+
+  UdagramWebAppLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !Ref InstanceAMI
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      IamInstanceProfile:
+        Fn::ImportValue: !Sub ${EnvironmentName}-Udagram-Instance-Profile
+      SecurityGroups:
+        - !Ref UdagramWebAppSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sdk"
+          Ebs:
+            VolumeSize: 10
+            DeleteOnTermination: true
+            VolumeType: gp2
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo apt update
+          sudo apt install unzip apache2 -y
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          ./aws/install
+
+          aws s3 cp s3://dev-udagram-prj-2/congdinh.zip . 
+          unzip -o congdinh.zip
+          sudo rm ~/../../var/www/html/index.html
+          sudo mv -v ./src/* ~/../../var/www/html
+          cd ~/../../var/www/html
+
+          sudo chown -R www-data:www-data .
+          sudo systemctl start apache2.service
+
+  UdagramLoadBalancerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${EnvironmentName}-Udagram-LB-TargetGroup"
+      Port: 80
+      Protocol: HTTP
+      VpcId:
+        Fn::ImportValue: !Sub ${EnvironmentName}-Udagram-VPC
+      TargetType: instance
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /index.html
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: 200
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-LB-TargetGroup"
+
+  UdagramLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub "${EnvironmentName}-Udagram-LoadBalancer"
+      Subnets:
+        - Fn::ImportValue: !Sub ${EnvironmentName}-Udagram-PublicSubnet1
+        - Fn::ImportValue: !Sub ${EnvironmentName}-Udagram-PublicSubnet2
+      SecurityGroups:
+        - !Ref UdagramLoadBalancerSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-LoadBalancer"
+
+  UdagramLoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref UdagramLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref UdagramLoadBalancerTargetGroup
+
+  UdagramLoadBalancerListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref UdagramLoadBalancerTargetGroup
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - /*
+      ListenerArn: !Ref UdagramLoadBalancerListener
+      Priority: 1
+
+  # ======================================================================================
+  # Udagram Web App Auto Scaling Policy
+  # ======================================================================================
+
+  UdagramWebAppAutoScalingGroupScaleUpPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref UdagramWebAppAutoScalingGroup
+      Cooldown: 300
+      ScalingAdjustment: 1
+
+  UdagramWebAppAutoScalingGroupScaleDownPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref UdagramWebAppAutoScalingGroup
+      Cooldown: 300
+      ScalingAdjustment: -1
+
+  # ======================================================================================
+  # Udagram Web App Auto Scaling Alarms
+  # ======================================================================================
+
+  UdagramWebAppAutoScalingGroupScaleUpAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Scale-up if CPU > 80% for 2 minutes
+      AlarmActions:
+        - !Ref UdagramWebAppAutoScalingGroupScaleUpPolicy
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 120
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref UdagramWebAppAutoScalingGroup
+
+  UdagramWebAppAutoScalingGroupScaleDownAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Scale-down if CPU < 20% for 2 minutes
+      AlarmActions:
+        - !Ref UdagramWebAppAutoScalingGroupScaleDownPolicy
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 120
+      EvaluationPeriods: 2
+      Threshold: 20
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref UdagramWebAppAutoScalingGroup
+
+Outputs:
+  # Add your outputs here
+  UdagramLoadBalancerDNSName:
+    Description: Udagram Load Balancer DNS Name
+    Value: !GetAtt UdagramLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${EnvironmentName}-Udagram-LoadBalancer-DNSName

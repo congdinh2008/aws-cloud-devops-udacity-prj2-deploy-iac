@@ -1,0 +1,18 @@
+[
+  {
+    "ParameterKey": "EnvironmentName",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "InstanceType",
+    "ParameterValue": "t2.micro"
+  },
+  {
+    "ParameterKey": "InstanceAMI",
+    "ParameterValue": "ami-053b0d53c279acc90"
+  },
+  {
+    "ParameterKey": "KeyName",
+    "ParameterValue": "UdagramBastionHostKey"
+  }
+]
