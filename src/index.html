@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>congdinh.com - Góc anh thợ code</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="shortcut icon" href="./assets/images/logo.ico" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css"
+        integrity="sha512-xh6O/CkQoPOWDdYTDqeRdPCVd1SpvCA9XXcUnZS2FmJNp1coAFzvtCN9BmamE+4aHK8yyUHUSCcJHgXloTyT2A=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <link rel="stylesheet" href="./assets/css/login.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                fontFamily: {
+                    fontAwesome: [
+                        'Font Awesome 5 Free',
+                    ]
+                },
+                extend: {
+                    colors: {
+                        'favorite-light': '#38b6ff',
+                        'favorite-dark': '#129bea',
+                        'dark': '#323130',
+                        'ccc': '#ccc',
+                    },
+                    backgroundColor: {
+                        'favorite-light': '#38b6ff',
+                        'favorite-dark': '#129bea',
+                        'hover-light': '#cccccc',
+                        'hover-dark': '#393737',
+                        'dark': '#191919',
+                        'menu-dark': '#323130',
+                        'nav-light': '#f2f2f2',
+                        'main': '#f4f4f4'
+                    },
+                    spacing: {
+                        '54x': '54px',
+                        '60x': '60px',
+                        '65x': '65px',
+                        '70x': '70px',
+                        '80x': '80px',
+                        '100x': '100px',
+                    },
+                    borderColor: {
+                        'ccc': '#cccccc',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-white text-dark dark:bg-dark dark:text-white">
+    <main class="main-content">
+        <section class="stars bg-dark">
+            <div class="h-screen flex justify-center items-center">
+                <div
+                    class="login-form w-[400px] z-10 bg-white text-black dark:bg-menu-dark dark:text-white rounded p-7">
+                    <h1 class="text-center">it works! Udagram, Udacity</h1>
+                </div>
+            </div>
+            <div class="objects">
+                <img class="object_rocket" src="./assets/images/rocket.svg" alt="Rocket" width="40" height="40">
+
+                <div class="earth-moon">
+                    <img class="object_earth" src="./assets/images/earth.svg" alt="Earth" width="100" height="100">
+                    <img class="object_moon" src="./assets/images/moon.svg" alt="Moon" width="80" height="80">
+                </div>
+
+                <div class="box_astronaut">
+                    <img class="object_astronaut" src="./assets/images/astronaut.svg" alt="Astronaut" width="140"
+                        height="140">
+                </div>
+            </div>
+            <div class="glowing_stars">
+                <div class="star"></div>
+                <div class="star"></div>
+                <div class="star"></div>
+                <div class="star"></div>
+                <div class="star"></div>
+            </div>
+        </section>
+    </main>
+
+    <script src="./assets/js/site.js"></script>
+</body>
+
+</html>
