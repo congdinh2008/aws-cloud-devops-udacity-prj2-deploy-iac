@@ -13,8 +13,8 @@ Parameters:
 
   InstanceType:
     Type: String
-    Description: Enter t3.micro for the instance type.
-    Default: t3.micro
+    Description: Enter t3.small for the instance type.
+    Default: t3.small
     AllowedValues:
       - t3.small
       - t3.medium
