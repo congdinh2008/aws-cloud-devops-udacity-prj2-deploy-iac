@@ -1,0 +1,339 @@
+Description: CD12352 - Infrastructure as Code Project - Network
+
+Parameters:
+  # Add your parameters here
+  EnvironmentName:
+    Type: String
+    Description: An environment name that will be prefixed to resource names
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    ConstraintDescription: must be dev or prod
+  VpcCIDR:
+    Type: String
+    Description: Enter the CIDR block for the VPC.
+    Default: "10.0.0.0/16"
+  
+  PublicSubnet1CIDR:
+    Type: String
+    Description: Enter the CIDR block for the public subnet in the first Availability Zone.
+    Default: "10.0.1.0/24"
+
+  PublicSubnet2CIDR:
+    Type: String
+    Description: Enter the CIDR block for the public subnet in the second Availability Zone.
+    Default: "10.0.2.0/24"
+
+  PrivateSubnet1CIDR:
+    Type: String
+    Description: Enter the CIDR block for the private subnet in the first Availability Zone.
+    Default: "10.0.11.0/24"
+
+  PrivateSubnet2CIDR:
+    Type: String
+    Description: Enter the CIDR block for the private subnet in the second Availability Zone.
+    Default: "10.0.12.0/24"
+
+Resources:
+  # Add your resources here
+  UdagramVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-VPC"
+  
+  UdagramInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-InternetGateway"
+
+  UdagramVPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref UdagramVPC
+      InternetGatewayId: !Ref UdagramInternetGateway
+
+  UdagramPublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref UdagramVPC
+      CidrBlock: !Ref PublicSubnet1CIDR
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-PublicSubnet1"
+
+  UdagramPublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref UdagramVPC
+      CidrBlock: !Ref PublicSubnet2CIDR
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-PublicSubnet2"
+
+  UdagramPrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref UdagramVPC
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-PrivateSubnet1"
+
+  UdagramPrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref UdagramVPC
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-PrivateSubnet2"
+  
+  UdagramEIP1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-EIP1"
+
+  UdagramEIP2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-EIP2"
+
+  UdagramNatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt UdagramEIP1.AllocationId
+      SubnetId: !Ref UdagramPublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-NatGateway1"
+
+  UdagramNatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt UdagramEIP2.AllocationId
+      SubnetId: !Ref UdagramPublicSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-NatGateway2"
+
+  UdagramPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref UdagramVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-PublicRouteTable"
+
+  UdagramPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: UdagramVPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref UdagramPublicRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref UdagramInternetGateway
+  
+  UdagramPublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref UdagramPublicSubnet1
+      RouteTableId: !Ref UdagramPublicRouteTable
+
+  UdagramPublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref UdagramPublicSubnet2
+      RouteTableId: !Ref UdagramPublicRouteTable
+
+  UdagramPrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref UdagramVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-PrivateRouteTable"
+
+  UdagramPrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref UdagramVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-PrivateRouteTable"
+
+  UdagramPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref UdagramPrivateRouteTable1
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref UdagramNatGateway1
+
+  UdagramPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref UdagramPrivateRouteTable2
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref UdagramNatGateway2
+
+  UdagramPrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref UdagramPrivateSubnet1
+      RouteTableId: !Ref UdagramPrivateRouteTable1
+
+  UdagramPrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref UdagramPrivateSubnet2
+      RouteTableId: !Ref UdagramPrivateRouteTable2
+
+Outputs:
+  UdagramVPC:
+    Description: Udagram VPC
+    Value: !Ref UdagramVPC
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-VPC"
+  
+  UdagramVPCGatewayAttachment:
+    Description: Udagram VPC Gateway Attachment
+    Value: !Ref UdagramVPCGatewayAttachment
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-VPCGatewayAttachment"
+  
+  UdagramPublicSubnet1:
+    Description: Udagram Public Subnet 1
+    Value: !Ref UdagramPublicSubnet1
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-PublicSubnet1"
+  
+  UdagramPublicSubnet2:
+    Description: Udagram Public Subnet 2
+    Value: !Ref UdagramPublicSubnet2
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-PublicSubnet2"
+
+  UdagramPrivateSubnet1:
+    Description: Udagram Private Subnet 1
+    Value: !Ref UdagramPrivateSubnet1
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-PrivateSubnet1"
+
+  UdagramPrivateSubnet2:
+    Description: Udagram Private Subnet 2
+    Value: !Ref UdagramPrivateSubnet2
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-PrivateSubnet2"
+  
+  UdagramPublicRouteTable:
+    Description: Udagram Public Route Table
+    Value: !Ref UdagramPublicRouteTable
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-PublicRouteTable"
+
+  UdagramPrivateRouteTable1:
+    Description: Udagram Private Route Table 1
+    Value: !Ref UdagramPrivateRouteTable1
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-PrivateRouteTable1"
+
+  UdagramPrivateRouteTable2:
+    Description: Udagram Private Route Table 2
+    Value: !Ref UdagramPrivateRouteTable2
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-PrivateRouteTable2"
+
+  UdagramEIP1:
+    Description: Udagram EIP 1
+    Value: !Ref UdagramEIP1
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-EIP1"
+
+  UdagramEIP2:
+    Description: Udagram EIP 2
+    Value: !Ref UdagramEIP2
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-EIP2"
+  
+  UdagramNatGateway1:
+    Description: Udagram Nat Gateway 1
+    Value: !Ref UdagramNatGateway1
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-NatGateway1"
+
+  UdagramNatGateway2:
+    Description: Udagram Nat Gateway 2
+    Value: !Ref UdagramNatGateway2
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-NatGateway2"
+
+  UdagramInternetGateway:
+    Description: Udagram Internet Gateway
+    Value: !Ref UdagramInternetGateway
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-InternetGateway"
+
+  UdagramPublicSubnet1RouteTableAssociation:
+    Description: Udagram Public Subnet 1 Route Table Association
+    Value: !Ref UdagramPublicSubnet1RouteTableAssociation
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-PublicSubnet1RouteTableAssociation"
+
+  UdagramPublicSubnet2RouteTableAssociation:
+    Description: Udagram Public Subnet 2 Route Table Association
+    Value: !Ref UdagramPublicSubnet2RouteTableAssociation
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-PublicSubnet2RouteTableAssociation"
+
+  UdagramPrivateSubnet1RouteTableAssociation:
+    Description: Udagram Private Subnet 1 Route Table Association
+    Value: !Ref UdagramPrivateSubnet1RouteTableAssociation
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-PrivateSubnet1RouteTableAssociation"
+
+  UdagramPrivateSubnet2RouteTableAssociation:
+    Description: Udagram Private Subnet 2 Route Table Association
+    Value: !Ref UdagramPrivateSubnet2RouteTableAssociation
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-PrivateSubnet2RouteTableAssociation"
+
+  UdagramPublicRoute:
+    Description: Udagram Public Route
+    Value: !Ref UdagramPublicRoute
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-PublicRoute"
+  
+  UdagramPrivateRoute1:
+    Description: Udagram Private Route 1
+    Value: !Ref UdagramPrivateRoute1
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-PrivateRoute1"
+
+  UdagramPrivateRoute2:
+    Description: Udagram Private Route 2
+    Value: !Ref UdagramPrivateRoute2
+    Export:
+      Name: !Sub "${EnvironmentName}-Udagram-PrivateRoute2"
+
+
+  
