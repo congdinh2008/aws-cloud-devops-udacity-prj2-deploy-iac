@@ -13,6 +13,9 @@ Parameters:
 
 Resources:
   # Add your resources here
+  # ======================================================================================
+  # Udagram IAM Role
+  # ======================================================================================
   UdagramIAMRole:
     Type: AWS::IAM::Role
     Properties:
@@ -54,6 +57,9 @@ Resources:
                 Resource:
                   - !Sub "arn:aws:s3:::dev-udagram-prj-2"
 
+  # ======================================================================================
+  # Udagram Instance Profile
+  # ======================================================================================
   UdagaramInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:

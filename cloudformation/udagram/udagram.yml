@@ -33,6 +33,10 @@ Parameters:
 
 Resources:
   # Add your resources here
+
+  # ======================================================================================
+  # Udagram Web App Load Balancer Security Group
+  # ======================================================================================
   UdagramLoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -53,6 +57,9 @@ Resources:
         - Key: Name
           Value: !Sub "${EnvironmentName}-Udagram-LB-SecurityGroup"
 
+  # ======================================================================================
+  # Udagram Web App Security Group
+  # ======================================================================================
   UdagramWebAppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -72,6 +79,9 @@ Resources:
         - Key: Name
           Value: !Sub "${EnvironmentName}-Udagram-WebApp-SecurityGroup"
 
+  # ======================================================================================
+  # Udagram Web App Auto Scaling Group
+  # ======================================================================================
   UdagramWebAppAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -89,6 +99,9 @@ Resources:
           Value: !Sub "${EnvironmentName}-Udagram-WebAppAutoScalingGroup"
           PropagateAtLaunch: true
 
+  # ======================================================================================
+  # Udagram Web App Launch Configuration
+  # ======================================================================================
   UdagramWebAppLaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
@@ -123,6 +136,9 @@ Resources:
           sudo chown -R www-data:www-data .
           sudo systemctl start apache2.service
 
+  # ======================================================================================
+  # Udagram Web App Load Balancer Target Group
+  # ======================================================================================
   UdagramLoadBalancerTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -144,6 +160,9 @@ Resources:
         - Key: Name
           Value: !Sub "${EnvironmentName}-Udagram-LB-TargetGroup"
 
+  # ======================================================================================
+  # Udagram Web App Load Balancer
+  # ======================================================================================
   UdagramLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:

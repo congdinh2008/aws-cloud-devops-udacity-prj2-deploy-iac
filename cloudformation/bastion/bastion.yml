@@ -41,6 +41,10 @@ Parameters:
 
 Resources:
   # Add your resources here
+
+  # ======================================================================================
+  # Bastion Host Security Group
+  # ======================================================================================
   UdagramBastionSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -65,6 +69,9 @@ Resources:
         - Key: Name
           Value: !Sub "${EnvironmentName}-Udagram-SecurityGroup"
 
+  # ======================================================================================
+  # Bastion Host Elastic IP
+  # ======================================================================================
   UdagramBastionElasticIP:
     Type: AWS::EC2::EIP
     Properties:
@@ -74,6 +81,9 @@ Resources:
         - Key: Name
           Value: !Sub "${EnvironmentName}-Udagram-ElasticIP"
   
+  # ======================================================================================
+  # Bastion Host Auto Scaling Group
+  # ======================================================================================
   UdagramBastionAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -89,6 +99,9 @@ Resources:
           Value: !Sub "${EnvironmentName}-Udagram-BastionAutoScalingGroup"
           PropagateAtLaunch: true
 
+  # ======================================================================================
+  # Bastion Host Launch Configuration
+  # ======================================================================================
   UdagramBastionLaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
@@ -121,7 +134,7 @@ Resources:
               sudo chmod 400 /home/ubuntu/.ssh/UdagramBastionHostKey.pem
 
             - EIPAllocation: !GetAtt UdagramBastionElasticIP.AllocationId
-            
+                    
 Outputs:
   # Add your outputs here
   UdagramBastionElasticIP:

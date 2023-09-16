@@ -17,6 +17,9 @@ Parameters:
 
 Resources:
   # Add your resources here
+  # ======================================================================================
+  # Udagram S3 Bucket
+  # ======================================================================================
   UdagramS3Bucket:
     Type: AWS::S3::Bucket
     Properties:

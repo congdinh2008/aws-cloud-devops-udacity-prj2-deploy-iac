@@ -1,6 +1,6 @@
 [
-	{
-		"ParameterKey": "EnvironmentName",
-		"ParameterValue": "dev"
-	}
+  {
+    "ParameterKey": "EnvironmentName",
+    "ParameterValue": "dev"
+  }
 ]
