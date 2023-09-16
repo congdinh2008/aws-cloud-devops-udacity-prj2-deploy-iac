@@ -1,0 +1,137 @@
+Description: CD12352 - Infrastructure as Code Project - Udagram
+
+Parameters:
+  # Add your parameters here
+  EnvironmentName:
+    Type: String
+    Description: An environment name that will be prefixed to resource names
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    ConstraintDescription: must be dev or prod
+  
+  InstanceType:
+    Type: String
+    Description: Enter t2.micro for the instance type.
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t2.medium
+    ConstraintDescription: must be a valid EC2 instance type.
+  
+  InstanceAMI:
+    Type: String
+    Description: Enter the AMI ID for the instance.
+    Default: ami-0d5eff06f840b45e9
+    ConstraintDescription: must be a valid AMI ID.
+
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+  
+  SSHLocation:
+    Description: The IP address range that can be used to SSH to the EC2 instances
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: "0.0.0.0/0"
+
+Resources:
+  # Add your resources here
+  UdagramBastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Udagram Bastion Security Group
+      VpcId: 
+        Fn::ImportValue: !Sub ${EnvironmentName}-Udagram-VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref SSHLocation
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: "0.0.0.0/0"
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-SecurityGroup"
+
+  UdagramBastionElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: 
+        Fn::ImportValue: !Sub ${EnvironmentName}-Udagram-VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-ElasticIP"
+  
+  UdagramBastionAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        - Fn::ImportValue: !Sub ${EnvironmentName}-Udagram-PublicSubnet1
+        - Fn::ImportValue: !Sub ${EnvironmentName}-Udagram-PublicSubnet2
+      LaunchConfigurationName: !Ref UdagramBastionLaunchConfiguration
+      MinSize: 1
+      MaxSize: 2
+      DesiredCapacity: 1
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-Udagram-BastionAutoScalingGroup"
+          PropagateAtLaunch: true
+
+  UdagramBastionLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !Ref InstanceAMI
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      IamInstanceProfile:
+        Fn::ImportValue: !Sub ${EnvironmentName}-Udagram-Instance-Profile
+      SecurityGroups:
+        - !Ref UdagramBastionSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sdk"
+          Ebs:
+            VolumeSize: 10
+      UserData:
+        Fn::Base64: 
+          Fn::Sub:
+            - |
+              #!/bin/bash
+              apt update
+              apt install unzip
+              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+              unzip awscliv2.zip
+              ./aws/install
+              instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+
+              aws ec2 associate-address --instance-id $instance_id --allow-reassociation  --region ${AWS::Region} --allocation-id ${EIPAllocation}
+
+              aws ssm get-parameter --name UdagramBastionHostKey --with-decryption --output text --query Parameter.Value > /home/ubuntu/.ssh/UdagramBastionHostKey.pem
+              sudo chmod 400 /home/ubuntu/.ssh/UdagramBastionHostKey.pem
+
+            - EIPAllocation: !GetAtt UdagramBastionElasticIP.AllocationId
+            
+Outputs:
+  # Add your outputs here
+  UdagramBastionElasticIP:
+    Description: The Elastic IP address of the Bastion host
+    Value: !Ref UdagramBastionElasticIP
+    Export:
+      Name: !Sub ${EnvironmentName}-Udagram-BastionElasticIP
+
+  UdagramBastionSecurityGroup:
+    Description: The Security Group ID of the Bastion host
+    Value: !Ref UdagramBastionSecurityGroup
+    Export:
+      Name: !Sub ${EnvironmentName}-Udagram-BastionSecurityGroup
