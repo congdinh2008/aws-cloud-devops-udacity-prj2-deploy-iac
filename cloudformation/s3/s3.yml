@@ -1,0 +1,56 @@
+Description: CD12352 - Infrastructure as Code Project - Udagram
+
+Parameters:
+  # Add your parameters here
+  EnvironmentName:
+    Type: String
+    Description: An environment name that will be prefixed to resource names
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    ConstraintDescription: must be dev or prod
+  
+  BucketName:
+    Type: String
+    Description: The name of the S3 bucket that will store the website content
+
+Resources:
+  # Add your resources here
+  UdagramS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${EnvironmentName}-${BucketName}"
+      AccessControl: Private
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Ref BucketName
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Project
+          Value: Udagram
+
+Outputs:
+  # Add your outputs here
+  S3BucketName:
+    Description: The name of the S3 bucket that will store the website content
+    Value: !Ref UdagramS3Bucket
+    Export:
+      Name: !Sub "${EnvironmentName}-UdagramS3Bucket"
+  
+  S3BucketArn:
+    Description: The ARN of the S3 bucket that will store the website content
+    Value: !GetAtt UdagramS3Bucket.Arn
+    Export:
+      Name: !Sub "${EnvironmentName}-UdagramS3BucketArn"
